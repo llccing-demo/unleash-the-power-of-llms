@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
+from langchain.output_parsers import DatetimeOutputParser, CommaSeparatedListOutputParser
 
 load_dotenv()
 
@@ -16,35 +17,24 @@ model = ChatOpenAI(
     temperature=0.0
 )
 
-examples = [
-  {
-    "review": "I absolutely love this product! It exceeded my expectations.",
-    "sentiment": "Positive"
-  },
-  {
-    "review": "I'm really disappointed with the quality of this item. It didn't meet my needs.",
-    "sentiment": "Negative"
-  },
-  {
-    "review": "The product is okay, but there's room for improvement.",
-    "sentiment": "Neutral"
-  }
-]
+parser_dateTime = DatetimeOutputParser()
+parser_List = CommaSeparatedListOutputParser()
 
-example_prompt = PromptTemplate(
-    input_variables=["review", "sentiment"],
-    template="Review: {review}\n{sentiment}"
+template = """Provide the response in format {format_instructions} 
+            to the user's question {question}"""
+
+prompt_dateTime = PromptTemplate.from_template(
+    template,
+    partial_variables={"format_instructions": parser_dateTime.get_format_instructions()},
 )
 
-prompt = FewShotPromptTemplate(
-    examples = examples,
-    example_prompt=example_prompt,
-    suffix="Review: {input}",
-    input_variables=["input"]
+prompt_List = PromptTemplate.from_template(
+    template,
+    partial_variables={"format_instructions": parser_List.get_format_instructions()},
 )
 
-message = prompt.format(input="The machine worked okay without much trouble.")
-
-response = model.invoke(message)
-print(response)
+response_date = model.invoke(input = prompt_dateTime.format(question="when was the first iPhone launched?"))
+response_list = model.invoke(input = prompt_List.format(question="What are the four famous car brands?"))
+print(response_date)
+print(response_list)
 
