@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 
 load_dotenv()
 
@@ -12,27 +12,38 @@ url = "https://oneapi.gptnb.me/v1"
 model = ChatOpenAI(
     model="gpt-4o",
     openai_api_key=api_key,
-    openai_api_base=url
+    openai_api_base=url,
+    temperature=0.0
 )
 
-email_template = ChatPromptTemplate.from_template(
-    "Create an invitation email to the recipinet that is {recipient_name} \
- for an event that is {event_type} in a language that is {language} \
- Mention the event location that is {event_location} \
- and event date that is {event_date}. \
- Also write few sentences about the event description that is {event_description} \
- in style that is {style} "
+examples = [
+  {
+    "review": "I absolutely love this product! It exceeded my expectations.",
+    "sentiment": "Positive"
+  },
+  {
+    "review": "I'm really disappointed with the quality of this item. It didn't meet my needs.",
+    "sentiment": "Negative"
+  },
+  {
+    "review": "The product is okay, but there's room for improvement.",
+    "sentiment": "Neutral"
+  }
+]
+
+example_prompt = PromptTemplate(
+    input_variables=["review", "sentiment"],
+    template="Review: {review}\n{sentiment}"
 )
 
-message = email_template.format(
-    style = "enthusiastic tone",
-    language = "American english",
-    recipient_name = "Rowan",
-    event_type="product launch",
-    event_date="July 11, 2024",
-    event_location="Dalian, China",
-    event_description="an exciting unveiling of latest innovations"
+prompt = FewShotPromptTemplate(
+    examples = examples,
+    example_prompt=example_prompt,
+    suffix="Review: {input}",
+    input_variables=["input"]
 )
+
+message = prompt.format(input="The machine worked okay without much trouble.")
 
 response = model.invoke(message)
 print(response)
