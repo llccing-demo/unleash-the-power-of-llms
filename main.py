@@ -1,42 +1,53 @@
-import http.client
-import json
 import os
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate, ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain.chains import LLMChain, SimpleSequentialChain 
 
 load_dotenv()
-
+#########   LLM Chain     ###############
 # Set your OpenAI API key here
 api_key = os.getenv("OPENAI_API_KEY")
+url = "https://oneapi.gptnb.me/v1"
+model = ChatOpenAI(
+    #model="claude-3-sonnet-20240229",
+    model="gpt-4o",
+    #model="gemini-1.5-pro-latest",
+    openai_api_key=api_key,
+    openai_api_base=url,
+)
 
-url = "https://oneapi.gptnb.me/v1/completions"
-conn = http.client.HTTPSConnection("oneapi.gptnb.me")
+prompt = ChatPromptTemplate.from_messages(
+    [("user", "Name the author of the book {book}")],
+)
 
-payload = json.dumps({
-    "model": "gpt-3.5-turbo",
-    #"model": "gpt-4-gizmo-g-IcWrQy2I9",
-    "messages": [
-        {"role": "system", "content": "you are a helpful assistant."},
-        {"role": "user", "content": "who are you"},
-    ]
-})
+# chain = prompt | model | StrOutputParser()
 
-headers = {
-    'Accept': 'application/json',
-    'Authorization': f'Bearer {api_key}',
-    'Content-Type': 'application/json'
-}
+# resp = chain.invoke({"book": "The Da Vinci Code"})
 
-print(payload)
-print(headers)
+# print(resp)
 
-conn.request('POST', '/v1/chat/completions', payload, headers)
-res = conn.getresponse()
-data = res.read()
-print(data.decode('utf-8'))
+#########   LLM Chain     ###############
+
+chain_1 = LLMChain(llm=model, prompt=prompt)
+prompt_2 = ChatPromptTemplate.from_messages(
+    [("user", "Write a 50-word biography fro the following author:{author_name}")]
+)
+chain_2 = LLMChain(llm=model, prompt=prompt_2)
+
+prompt_3 = ChatPromptTemplate.from_messages(
+    [("user", "translate all contents {contents} to Chinese")]
+)
+chain_3 = LLMChain(llm=model, prompt=prompt_3)
+
+#chain_1 = prompt | model | StrOutputParser()
+#chain_2 = prompt_2 | model | StrOutputParser()
+#chain_3 = prompt_3 | model | StrOutputParser()
 
 
-#if __name__ == "__main__":
-    #user_prompt = input("Enter your prompt: ")
-    #result = call_openai_api(user_prompt)
-    #print("Response from OpenAI:")
-    #print(result)
+simple_sequential_chain = SimpleSequentialChain(chains=[chain_1, chain_2, chain_3], verbose=True)
+#simple_sequential_chain = RunnableSequence([chain_1, chain_2, chain_3], verbose=True)
+
+resp = simple_sequential_chain.invoke("The Da Vinci Code")
+print(resp)
