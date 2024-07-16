@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate, ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.chains import LLMChain, SimpleSequentialChain 
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory, ConversationSummaryMemory
 from langchain.chains import ConversationChain
 
 load_dotenv()
@@ -20,7 +20,17 @@ model = ChatOpenAI(
     openai_api_base=url,
 )
 
-memory = ConversationBufferMemory()
+# Buffer memory
+#memory = ConversationBufferMemory()
+
+# Conversation windows
+# k represent the latest k dialog the ai can remember.
+# memory = ConversationBufferWindowMemory(k=1)
+
+# Conversation summary
+# for huge dialogs, this can avoid model overwhelming.
+memory = ConversationSummaryMemory(llm=model)
+
 memory.save_context(
   { "input": "Alex is a 9-year old boy."},
   { "output": "Hello Alex! How can I assist you today?"}
