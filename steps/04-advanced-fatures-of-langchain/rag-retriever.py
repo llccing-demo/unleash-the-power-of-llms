@@ -1,8 +1,7 @@
 import os
 from dotenv import load_dotenv
-from langchain_openai import OpenAIEmbeddings 
 from langchain_community.document_loaders import TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 
 load_dotenv()
@@ -15,17 +14,6 @@ url = "https://oneapi.gptnb.me/v1"
 input_document = TextLoader('recipe-small.txt').load()
 input_text = " ".join(doc.page_content for doc in input_document)
 
-# transform the document
-text_splitter = RecursiveCharacterTextSplitter(
-  # the chunk_size and chunk_overlap can be modified according to the requirements
-  length_function = len,
-  chunk_size = 200,
-  chunk_overlap = 10,
-  add_start_index = True,
-)
-
-documents = text_splitter.create_documents([input_text])
-
 embeddings = OpenAIEmbeddings(
   # note here, this should be embeddings model rather than chat model.
   # models at here https://platform.openai.com/docs/models/embeddings
@@ -36,7 +24,8 @@ embeddings = OpenAIEmbeddings(
 )
 
 # embed the chunks
-db = Chroma.from_documents(documents, embeddings)
+db = Chroma.from_texts([input_text], embeddings)
+retriever = db.as_retriever()
 
 #query = "如何做口水鸡"
 # the reuslt is incorrect.
@@ -49,11 +38,7 @@ query = '如何做一品海参'
 """
 [Document(metadata={'start_index': 1118}, page_content='特点:\n\n形整大方，海参软糯，馅味鲜香，多为海参席头菜。\n\n所属菜系：川菜\n\n\n\n\n\n一品海参\n\n\n原料:\n\n整开乌参一只（250克）。 猪肥瘦肉50克、冬笋25克、口蘑5克、火腿25克、干贝25克。猪油50克、酱油10克、料酒30克、盐2克、味精0.5克、二汤50克、。豆粉10克、清汤50克。\n\n制作方法:'), Document(metadata={'start_index': 1464}, page_content='、盐。味精，然后封上碗口上笼蒸一小时。食时漠去原汁后，翻扣盘中，以原汁加水豆粉调匀，淋于海参上即成。'), Document(metadata={'start_index': 1066}, page_content='、盐。味精，然后封上碗口上笼蒸一小时。食时漠去原汁后，翻扣盘中，以原汁加水豆粉调匀，淋于海参上即成。'), Document(metadata={'start_index': 716}, page_content='特点:\n\n寿桃形象逼真，食之沙甜爽口，沁入心脾。\n\n所属菜系：鲁菜\n\n\n\n\n\n一品海参\n\n\n原料:\n\n整开乌参一只（250克）。 猪肥瘦肉50克、冬笋25克、口蘑5克、火腿25克、干贝25克。猪油50克、酱油10克、料酒30克、盐2克、味精0.5克、二汤50克、。豆粉10克、清汤50克。\n\n制作方法:\n\n【制作过程】')]
 """
-# docs = db.similarity_search(query)
 
-
-# embedding the query
-embedding_vector = embeddings.embed_query(query)
-docs = db.similarity_search_by_vector(embedding_vector)
+docs = retriever.invoke(query)
 print(docs)
 
